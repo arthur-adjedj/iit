@@ -1,7 +1,13 @@
 import Lake
 open Lake DSL
 
-package iit {
-  libRoots := #["IIT"],
-  defaultFacet := PackageFacet.sharedLib
-}
+package «IIT» where
+
+lean_lib «IIT» where
+
+@[default_target]
+lean_exe «iit» where
+  root := `Main
+
+
+require std from git "https://github.com/leanprover/std4" @ "v4.4.0"

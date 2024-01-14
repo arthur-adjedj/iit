@@ -17,8 +17,8 @@ def liftBVarsThree (e : Expr) : Expr := liftLooseBVars e 0 3
 
 def resultingLevel (e : Expr) : Level :=
 match e with
-| forallE n t b d => resultingLevel b
-| sort l d        => l
+| forallE _ _ b _ => resultingLevel b
+| sort l        => l
 | _ => levelZero
 
 def mkForallM (n : Name) (bi : BinderInfo) (t : Expr) (b : Expr → MetaM Expr) : MetaM Expr := do
@@ -66,20 +66,20 @@ open Tactic
 
 instance : Inhabited CasesSubgoal := Inhabited.mk $ CasesSubgoal.mk default ""
 
-def casesPSigma (mVar : MVarId) (fVar : FVarId) (fstName sndName : Name) :
+def casesPSigma (mVar : MVarId) (fVar : FVarId) (_fstName _sndName : Name) :
   MetaM (FVarId × FVarId × MVarId) := do
-  let sgs ← cases mVar fVar --#[[fstName, sndName]] TODO names?
-  return (sgs[0].fields[0].fvarId!, sgs[0].fields[1].fvarId!, sgs[0].mvarId)
+  let sgs ← mVar.cases fVar --#[[fstName, sndName]] TODO names?
+  return (sgs[0]!.fields[0]!.fvarId!, sgs[0]!.fields[1]!.fvarId!, sgs[0]!.mvarId)
 
 def casesNoFields (mVar : MVarId) (fVar : FVarId) : TacticM (FVarSubst × MVarId) := do
-  let sgs ← cases mVar fVar --#[[]]
-  return (sgs[0].subst, sgs[0].mvarId)
+  let sgs ← mVar.cases fVar --#[[]]
+  return (sgs[0]!.subst, sgs[0]!.mvarId)
 
-partial def withLocalDeclDs {α} (names : Array Name) (vals : Array Expr) 
+partial def withLocalDeclDs {α} (names : Array Name) (vals : Array Expr)
   (x : Array FVarId → MetaM α) (fVars : Array FVarId := #[]) : MetaM α :=
 let i := fVars.size
 if i >= vals.size then x fVars else do
-  withLocalDeclD names[i] vals[i] fun fVar => do
+  withLocalDeclD names[i]! vals[i]! fun fVar => do
     withLocalDeclDs names vals x $ fVars.push fVar.fvarId!
 
 /- Performs a Tactic akin to "have" and returns
@@ -89,10 +89,10 @@ if i >= vals.size then x fVars else do
 def metaHave (mVar : MVarId) (name : Name) (type : Expr) : MetaM (MVarId × (FVarId × MVarId) × Expr) := do
   let val ← mkFreshExprMVar type
   let valMVar := val.mvarId!
-  let bodyType ← getMVarType mVar
+  let bodyType ← Lean.MVarId.getType mVar
   let f ← mkFreshExprMVar $ mkForall name BinderInfo.default type bodyType
   let fMVar := f.mvarId!
-  let bodyMVar ← intro fMVar name
+  let bodyMVar ← Lean.MVarId.intro fMVar name
   return (valMVar, bodyMVar, mkApp f val)
 
 end Meta

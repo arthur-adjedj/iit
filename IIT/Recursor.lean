@@ -24,14 +24,14 @@ else mkConst n l
 
 partial def recTypeTmS (e : Expr) : MetaM Expr := do
 match e with
-| app f e _ => return mkApp (←recTypeTmS f) e
-| const n l _ => let t := addRecIfHeader its n l
+| app f e => return mkApp (←recTypeTmS f) e
+| const n l => let t := addRecIfHeader its n l
                  return mkAppN t (motives ++ methods.concat)
 | _ => return e --TODO
 
 partial def recType (l : Level) (e sref dref : Expr) : MetaM Expr := do
 match e with
-| forallE n t b _ => 
+| forallE n t b _ =>
   match headerAppIdx? its t with
   | some _ => let sref := mkApp (liftBVarsOne sref) $ mkBVar 0
               let trec ← recTypeTmS its motives methods (liftBVarsOne t)
@@ -43,7 +43,7 @@ match e with
               let dref := mkApp (liftBVarsOne dref) $ mkBVar 0
               return mkForall n e.binderInfo t $
               ← recType l b sref dref
-| sort l _ => let dref := liftBVarsOne dref
+| sort l => let dref := liftBVarsOne dref
               return mkForall "s" BinderInfo.default sref $
               mkApp dref $ mkBVar 0
 | _ => return e
@@ -52,7 +52,7 @@ partial def recTypes (i : Nat := 0) (rTypes : List Expr := []) : MetaM $ List Ex
 if i >= its.length then return rTypes else do
 let name := (its.get! i).name
 let type := (its.get! i).type
-let recType ← recType its motives methods (ls.get! i) type (mkConst name) motives[i]
+let recType ← recType its motives methods (ls.get! i) type (mkConst name) motives[i]!
 let recType ← mkForallFVars (motives ++ methods.concat) recType
 recTypes (i + 1) (rTypes.append [recType])
 
@@ -62,9 +62,9 @@ else mkConst n l
 
 private partial def recVal_motiveRelRef (e etot : Expr) : MetaM Expr := do
 match e with
-| app f e _ => let e' := etot.appArg! --need the _type_ of `e` instead
+| app f e => let e' := etot.appArg! --need the _type_ of `e` instead
                return mkAppN (←recVal_motiveRelRef f etot.appFn!) #[e, mkFst e', mkSnd e']
-| const n l _ => let t := addTotIfHeader its n l
+| const n l => let t := addTotIfHeader its n l
                  return mkAppN t (motives ++ methods.concat)
 | _ => return e
 
@@ -86,7 +86,7 @@ match e with
               let btot := etot.bindingBody!
               return mkLambda n e.binderInfo t $
               ← recVal l b btot sref tref
-| sort l _ => let tref := mkApp (liftBVarsOne tref) (mkBVar 0)
+| sort _ => let tref := mkApp (liftBVarsOne tref) (mkBVar 0)
               return mkLambda "s" BinderInfo.default sref $
               mkFst tref
 | _ => return e
@@ -108,7 +108,7 @@ if i >= its.length then return recs else do
   let recType := recTypes.get! i
   let recVal := recVals.get! i
   --if i>1 then throwError "rec val is {indentExpr recVal}"
-  let decl := Declaration.defnDecl { name     := (its.get! i).name ++ recursorSuffix, 
+  let decl := Declaration.defnDecl { name     := (its.get! i).name ++ recursorSuffix,
                                      levelParams  := [], --TODO
                                      value    := recVal,
                                      type     := recType,

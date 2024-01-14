@@ -17,21 +17,21 @@ variable (its eits wits : List InductiveType)
 
 def sigmaHeader (i : Nat) (e : Expr := (its.get! i).type) (wref := mkConst (wits.get! i).name) : Expr :=
 match e with
-| sort l _        => mkSigma l (mkConst (eits.get! i).name) wref
-| forallE n t b _ => 
+| sort l        => mkSigma l (mkConst (eits.get! i).name) wref
+| forallE n t b _ =>
   match headerAppIdx? its t with
   | some _ => let jfst := mkFst $ mkBVar 0
               let wref := liftBVarsOne wref
               mkLambda n e.binderInfo t $ sigmaHeader i b (mkApp wref jfst)
   | none   => let wref := liftBVarsOne wref
               mkLambda n e.binderInfo t $ sigmaHeader i b (mkApp wref (mkBVar 0))
-| app f e _       => mkApp (sigmaHeader i f) e
+| app f e       => mkApp (sigmaHeader i f) e
 | _               => e
 
 def sigmaCtorTmS (e : Expr) (eref wref : Expr) : TermElabM Expr := do
 match e with
-| app f _ _   => sigmaCtorTmS f eref wref
-| const _ _ _ => mkPair eref wref
+| app f _   => sigmaCtorTmS f eref wref
+| const _ _ => mkPair eref wref
 | _           => return e
 
 def sigmaCtor (ctorName : Name) (e : Expr)
@@ -64,7 +64,7 @@ if i >= its.length then return hDecls ++ ctorDecls else do
                                   type := ctor.type,
                                   hints := ReducibilityHints.regular 0,
                                   safety := DefinitionSafety.safe }
-  let decl := Declaration.defnDecl { name     := (its.get! i).name, 
+  let decl := Declaration.defnDecl { name     := (its.get! i).name,
                                      levelParams  := [], --TODO
                                      value    := hr
                                      type     := type,

@@ -54,16 +54,16 @@ def declareInductiveTypes (views : Array InductiveView) (pr : PreElabResult) : T
 def elabIIT (elems : Array Syntax) : CommandElabM Unit := do
   let ⟨terminations, elems⟩ := elems.partition fun stx =>
     match stx with
-    | `(iit_termination $x) => true
+    | `(iit_termination $_) => true
     | _                     => false
   -- There should be only one `iit_termination` command
   let views ← elems.mapM inductiveSyntaxToView
   if views.size = 0 then throwError "Empty IIT declaration."
-  let view0 := views[0]
-  runTermElabM view0.declName fun vars => do
+  let view0 := views[0]!
+  runTermElabM fun vars => do
     withRef view0.ref do
       -- Elaborate IITs without declaring them (kernel would reject)
-      let pr ← preElabViews vars views 
+      let pr ← preElabViews vars views
       -- Calculate and declare type erasure
       let eits := erase pr.its
       let epr := { pr with its := eits }
@@ -74,13 +74,13 @@ def elabIIT (elems : Array Syntax) : CommandElabM Unit := do
       declareInductiveTypes views wpr
       -- Calculate sigma construction and declare it
       let sigmaDecls ← sigmaDecls pr.its eits wits
-      sigmaDecls.toArray.forM addDecl
+      sigmaDecls.toArray.forM (liftM $ addDecl ·)
       let ls := pr.its.map fun _ => levelOne --TODO make universe polymorphic
       withRecArgs pr.its ls fun motives methods => do
         let rits ← elimRelation motives methods pr.its
-        let rpr := { pr with its := rits, 
+        let rpr := { pr with its := rits,
                              numParams := pr.numParams + motives.size + methods.concat.size }
-        let ctorss : List (Array Constructor) := rits.map fun rit => rit.ctors.toArray
+        let _ctorss : List (Array Constructor) := rits.map fun rit => rit.ctors.toArray
         --let ctors : Array Constructor := ctorss.toArray.concat
         declareInductiveTypes views rpr
         -- Calculate the types for totality lemmas
@@ -101,8 +101,8 @@ def elabIIT (elems : Array Syntax) : CommandElabM Unit := do
         if totMVars.length > 0 then
             -- There should be only one `iit_termination` command
           unless (terminations.size = 1) do throwError "Need to supply a `iit_termination` command to solve totality."
-          let termination := terminations[0][1][0]
-          let ⟨_, s⟩ ← (Tactic.evalTactic termination { main := totMVars.get! 0, elaborator := Name.anonymous }).run { goals := totMVars }
+          let termination := terminations[0]![1]![0]!
+          let ⟨_, s⟩ ← (Tactic.evalTactic termination { elaborator := Name.anonymous }).run { goals := totMVars }
           unless s.goals.length = 0 do throwError "Tactic block does't solve all goals"
         for i in [0:pr.its.length] do
           let mv ← instantiateMVars $ totVals.get! i
@@ -116,7 +116,7 @@ def elabIIT (elems : Array Syntax) : CommandElabM Unit := do
           addDecl decl
         -- Declare recursors
         let recDecls ← recDecls pr.its ls motives methods
-        recDecls.toArray.forM addDecl
+        recDecls.toArray.forM (liftM $ addDecl ·)
 
 end IITElab
 
@@ -128,10 +128,10 @@ open Lean.Elab.Command
 open Lean
 
   -- Throw an error when encountering a lone IIT or termination declaration
-  @[commandElab «iit»] def elabLoneIIT : CommandElab :=
+  @[command_elab «iit»] def elabLoneIIT : CommandElab :=
   λ _ => throwError "Must declare IIT in a 'mutual' block."
 
-  @[commandElab «iit_termination»] def elabLoneIITTermination : CommandElab :=
+  @[command_elab «iit_termination»] def elabLoneIITTermination : CommandElab :=
   λ _ => throwError "Must declare IIT Termination in a 'mutual' after a series of IIT declarations."
 
   -- Checks if all declarations in the block are IITs
@@ -140,7 +140,7 @@ open Lean
     (declKind == `«iit») || (declKind == `«iit_termination»)
 
   -- If all declarations in a mutual block are IITs, elab them, otherwise elab as before
-  @[commandElab «mutual»] def elabIITMutual : CommandElab := fun stx =>
+  @[command_elab «mutual»] def elabIITMutual : CommandElab := fun stx =>
     if isIITMutual stx then elabIIT stx[1].getArgs
     else elabMutual stx
 

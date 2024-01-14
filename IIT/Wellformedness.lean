@@ -24,8 +24,8 @@ variable (its eits : List InductiveType)
 --TODO move the next three defs into some util file
 def headerAppIdx? (e : Expr) : Option Nat :=
 match e with
-| const n l d => getIdx? (collectHeaderNames its) n
-| app f e d   => headerAppIdx? f
+| const n _ => getIdx? (collectHeaderNames its) n
+| app f _   => headerAppIdx? f
 | _           => none
 
 partial def ctorAppIdx?Aux (n : Name) (i := 0) : Option (Nat × Nat) :=
@@ -36,17 +36,17 @@ match getIdx? ((its.get! i).ctors.toArray.map Constructor.name) n with
 
 def ctorAppIdx? (e : Expr) : Option (Nat × Nat) :=
 match e with
-| const n l d => ctorAppIdx?Aux its n
-| app f e d   => ctorAppIdx? f
+| const n _ => ctorAppIdx?Aux its n
+| app f _   => ctorAppIdx? f
 | _           => none
 
 def wellfHeader (i : Nat) (e : Expr := (its.get! i).type) : Expr :=
 match e with
-| sort _ _        => mkForall "e" BinderInfo.default 
+| sort _        => mkForall "e" BinderInfo.default
                       (mkConst $ (its.get! i).name ++ erasureSuffix) (mkSort levelZero)
-| forallE n t b d => 
+| forallE n t b _ =>
   match headerAppIdx? its t with
-  | some j => mkForall n e.binderInfo 
+  | some j => mkForall n e.binderInfo
                 (mkConst $ (its.get! j).name ++ erasureSuffix) (wellfHeader i b)
   | none   => mkForall n e.binderInfo t (wellfHeader i b)
 | _ => e
@@ -62,25 +62,25 @@ else mkConst n l
 
 def wellfCtorTmP (e : Expr) : Expr :=
 match e with
-| const n l _ => addEIfCtor its n l
-| app f e _   => mkApp (wellfCtorTmP f) (wellfCtorTmP e)
+| const n l => addEIfCtor its n l
+| app f e   => mkApp (wellfCtorTmP f) (wellfCtorTmP e)
 | _           => e
 
 def wellfCtorTmS (e : Expr) : Expr :=
 match e with
-| app f e _   => mkApp (wellfCtorTmS f) (wellfCtorTmP its e)
-| const n l _ => addWIfHeader its n l
+| app f e   => mkApp (wellfCtorTmS f) (wellfCtorTmP its e)
+| const n l => addWIfHeader its n l
 | _           => e
 
 partial def wellfCtor (e eref : Expr) : Expr :=
 match e with
-| forallE n t b d =>
+| forallE n t b _ =>
   match headerAppIdx? its t with
   | some j => mkForall (n ++ "e") BinderInfo.default (mkConst $ (eits.get! j).name) $
-              mkForall (n ++ "w") b.binderInfo 
+              mkForall (n ++ "w") b.binderInfo
                (mkApp (liftBVarsOne (wellfCtorTmS its t)) (mkBVar 0)) $
                wellfCtor (liftBVarsOne b) (mkApp (liftBVarsTwo eref) (mkBVar 1))
-  | none   => mkForall n e.binderInfo t $ 
+  | none   => mkForall n e.binderInfo t $
               wellfCtor b (mkApp (liftBVarsOne eref) (mkBVar 0))
 | _ => mkApp (wellfCtorTmS its e) eref
 
