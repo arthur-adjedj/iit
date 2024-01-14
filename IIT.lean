@@ -2,6 +2,7 @@
 import Lean.Parser
 import Lean.Elab
 import Lean.Elab.Tactic.Basic
+import Lean.Elab.Term
 import IIT.InductiveUtils
 import IIT.PreElab
 import IIT.Erasure
@@ -60,7 +61,7 @@ def elabIIT (elems : Array Syntax) : CommandElabM Unit := do
   let views ← elems.mapM inductiveSyntaxToView
   if views.size = 0 then throwError "Empty IIT declaration."
   let view0 := views[0]!
-  runTermElabM fun vars => do
+  runTermElabM fun vars => Term.withDeclName view0.declName do
     withRef view0.ref do
       -- Elaborate IITs without declaring them (kernel would reject)
       let pr ← preElabViews vars views
@@ -146,6 +147,6 @@ open Lean
 
 end MutualElab
 
-builtin_initialize Lean.registerTraceClass `IIT.Totality
+initialize Lean.registerTraceClass `IIT.Totality
 
 end IIT

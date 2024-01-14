@@ -18,9 +18,9 @@ def inductiveSyntaxToView (decl : Syntax) : CommandElabM InductiveView := do
   let type             := decl[2][1][1]
   let declId           := decl[1]
   let ⟨name, declName, levelNames⟩ ← expandDeclId declId { }
-  let ctors      ← decl[4].getArgs.mapM fun ctor => withRef ctor do
-    let ctorModifiers ← elabModifiers ctor[1]
-    let ctorName := ctor.getIdAt 2
+  let ctors      ← decl[4]!.getArgs.mapM fun ctor => withRef ctor do
+    let ctorModifiers := {} -- ← elabModifiers ctor[1]
+    let ctorName := ctor.getIdAt 3
     let ctorName := declName ++ ctorName
     let ctorName ← withRef ctor[2] $ applyVisibility ctorModifiers.visibility ctorName
     let (binders, type?) := expandOptDeclSig ctor[4]
@@ -30,7 +30,8 @@ def inductiveSyntaxToView (decl : Syntax) : CommandElabM InductiveView := do
               modifiers := ctorModifiers,
               declName := ctorName,
               binders := binders,
-              type? := type? : CtorView }
+              type? := type? : CtorView
+          }
   let classes ← getOptDerivingClasses decl[5]
   pure { ref           := decl,
          modifiers     := { },
