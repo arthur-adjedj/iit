@@ -32,28 +32,27 @@ match e with
               let dref := mkApp (mkApp (liftBVarsThree dref) $ mkBVar 2) $ mkBVar 1
               let rref := mkApp (mkApp (liftBVarsThree rref) $ mkBVar 2) $ mkBVar 1
               return mkForall n e.binderInfo t $
-              mkForall (n ++ motiveSuffix) BinderInfo.implicit tm $
-              mkForall (n ++ relationSuffix) BinderInfo.default tr $
-              ← totalityType l (liftBVarsTwo b) sref dref rref
+                mkForall (n ++ motiveSuffix) BinderInfo.implicit tm $
+                mkForall (n ++ relationSuffix) BinderInfo.default tr $
+                ← totalityType l (liftBVarsTwo b) sref dref rref
   | none   => let sref := mkApp (liftBVarsOne sref) $ mkBVar 0
               let dref := mkApp (liftBVarsOne dref) $ mkBVar 0
               let rref := mkApp (liftBVarsOne rref) $ mkBVar 0
               return mkForall n e.binderInfo t $
-              ← totalityType l b sref dref rref
+                ← totalityType l b sref dref rref
 | sort l  => let dref := liftBVarsOne dref
                let rref := liftBVarsOne rref
                return mkForall "s" BinderInfo.default sref $
-               mkSigma l (mkApp dref $ mkBVar 0) (mkApp rref $ mkBVar 0)
+                mkSigma l (mkApp dref $ mkBVar 0) (mkApp rref $ mkBVar 0)
 | _ => return e
 
-partial def totalityTypes (i : Nat := 0) (totTypes : List Expr := []) : MetaM $ List Expr :=
-if i >= its.length then return totTypes else do
-let name := (its.get! i).name
-let type := (its.get! i).type
-let rref := mkAppN (mkConst $ name ++ relationSuffix) (motives ++ methods.concat)
-let tot ← totalityType its motives methods (ls.get! i) type (mkConst name) motives[i]! rref --TODO level
-let tot ← mkForallFVars (motives ++ methods.concat) tot
-totalityTypes (i + 1) (totTypes.append [tot])
+partial def totalityTypes (i : Nat := 0) (totTypes : List Expr := []) : MetaM $ List Expr := do
+  if i >= its.length then return totTypes
+  let {name, type ..} := (its.get! i)
+  let rref := mkAppN (mkConst $ name ++ relationSuffix) (motives ++ methods.concat)
+  let tot ← totalityType its motives methods (ls.get! i) type (mkConst name) motives[i]! rref --TODO level
+  let tot ← mkForallFVars (motives ++ methods.concat) tot
+  totalityTypes (i + 1) (totTypes.append [tot])
 
 open Lean.Parser
 open Lean.Elab.Command

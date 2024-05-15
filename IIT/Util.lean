@@ -7,6 +7,8 @@ open Meta
 
 namespace Lean
 
+instance : Coe String Name := ⟨Name.mkSimple⟩
+
 namespace Expr
 
 def liftBVarsOne (e : Expr) : Expr := liftLooseBVars e 0 1
@@ -57,10 +59,6 @@ if n = 0 then return ([], f) else do
   let (mids, f) ← appExprHoleN (n - 1) f
   let (mid, f) ← appExprHole f
   return (mids.append [mid], f)
-
-def FVarSubst.append (s1 s2 : FVarSubst) : FVarSubst :=
-let f s k v := (s.erase k).insert k $ s.apply v
-s1.map.foldl f s2
 
 open Tactic
 

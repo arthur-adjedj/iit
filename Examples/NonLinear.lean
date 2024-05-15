@@ -10,18 +10,7 @@ iit B : (a a' : A) → Type where
 | foo : (a : A) → B a a
 
 iit_termination
- admit
- admit
- admit
- admit
- admit
- admit
- admit
- admit
- admit
- admit
- admit
- admit
-
+  all_goals sorry
 end
 
+#print B.w
