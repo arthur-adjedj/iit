@@ -76,7 +76,7 @@ def elabIIT (elems : Array Syntax) : CommandElabM Unit := do
       -- Calculate sigma construction and declare it
       let sigmaDecls ← sigmaDecls pr.its eits wits
       sigmaDecls.toArray.forM (liftM $ addDecl ·)
-      let ls := pr.its.map fun _ => levelOne --TODO make universe polymorphic
+      let ls ← getResultingUniverses pr.its
       withRecArgs pr.its ls fun motives methods => do
         let rits ← elimRelation motives methods pr.its
         let rpr := { pr with its := rits,
@@ -109,7 +109,7 @@ def elabIIT (elems : Array Syntax) : CommandElabM Unit := do
           let mv ← instantiateMVars $ totVals.get! i
           -- Declare `Hd.tot` for each sort `Hd`
           let decl := Declaration.defnDecl { name         := (pr.its.get! i).name ++ totalitySuffix,
-                                             levelParams  := [], -- TODO
+                                             levelParams  := collectLevelParamsInInductive pr.its |>.toList, -- TODO
                                              value        := mv,
                                              type         := totTypes.get! i,
                                              hints        := default -- TODO

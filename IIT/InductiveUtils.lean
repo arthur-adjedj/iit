@@ -32,7 +32,7 @@ def inductiveSyntaxToView (decl : Syntax) : CommandElabM InductiveView := do
               binders := binders,
               type? := type? : CtorView
           }
-  let classes ← getOptDerivingClasses decl[5]
+  let classes ← liftTermElabM <| getOptDerivingClasses decl[5]
   pure { ref           := decl,
          modifiers     := { },
          shortDeclName := name,
@@ -56,6 +56,15 @@ def getResultingUniverse : List InductiveType → TermElabM Level
     match r with
     | Expr.sort u => pure u
     | _             => throwError "unexpected inductive type resulting type"
+
+def getResultingUniverses : List InductiveType → TermElabM (List Level)
+  | []           => pure []
+  | indType :: tl => do
+    let r ← getResultingType indType.type
+    match r with
+    | Expr.sort u => return u::(← getResultingUniverses tl)
+    | _             => throwError "unexpected inductive type resulting type"
+
 
 def collectUsed (indTypes : List InductiveType) : StateRefT CollectFVars.State MetaM Unit := do
   indTypes.forM fun indType => do

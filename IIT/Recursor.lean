@@ -43,7 +43,7 @@ match e with
               let dref := mkApp (liftBVarsOne dref) $ mkBVar 0
               return mkForall n e.binderInfo t $
               ← recType l b sref dref
-| sort l => let dref := liftBVarsOne dref
+| sort _l => let dref := liftBVarsOne dref
               return mkForall "s" BinderInfo.default sref $
               mkApp dref $ mkBVar 0
 | _ => return e
@@ -57,15 +57,17 @@ let recType ← mkForallFVars (motives ++ methods.concat) recType
 recTypes (i + 1) (rTypes.append [recType])
 
 def addTotIfHeader (n : Name) (l : List Level) : Expr :=
-if contains (collectHeaderNames its) n then mkConst (n ++ totalitySuffix) l
-else mkConst n l
+  if contains (collectHeaderNames its) n then
+    mkConst (n ++ totalitySuffix) l
+  else
+    mkConst n l
 
 private partial def recVal_motiveRelRef (e etot : Expr) : MetaM Expr := do
 match e with
 | app f e => let e' := etot.appArg! --need the _type_ of `e` instead
-               return mkAppN (←recVal_motiveRelRef f etot.appFn!) #[e, mkFst e', mkSnd e']
+             return mkAppN (←recVal_motiveRelRef f etot.appFn!) #[e, mkFst e', mkSnd e']
 | const n l => let t := addTotIfHeader its n l
-                 return mkAppN t (motives ++ methods.concat)
+               return mkAppN t (motives ++ methods.concat)
 | _ => return e
 
 -- Invariant: `recVal l e sref dref` should be of type `recType l e sref dref`.
@@ -109,7 +111,7 @@ if i >= its.length then return recs else do
   let recVal := recVals.get! i
   --if i>1 then throwError "rec val is {indentExpr recVal}"
   let decl := Declaration.defnDecl { name     := (its.get! i).name ++ recursorSuffix,
-                                     levelParams  := [], --TODO
+                                     levelParams  := collectLevelParamsInInductive its |>.toList, --TODO
                                      value    := recVal,
                                      type     := recType,
                                      hints    := default,

@@ -2,6 +2,7 @@
 
 import Lean.Elab.Command
 import Init.Data.Array.Basic
+import IIT.Util
 
 open Lean
 open Elab
@@ -10,6 +11,7 @@ open Expr
 
 namespace IIT
 variable (its : List InductiveType)
+
 
 def erasureSuffix : String := "E"
 

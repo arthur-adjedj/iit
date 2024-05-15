@@ -9,5 +9,4 @@ lean_lib «IIT» where
 lean_exe «iit» where
   root := `Main
 
-
-require std from git "https://github.com/leanprover/std4" @ "v4.4.0"
+require std from git "https://github.com/leanprover/std4" @ "v4.6.0"

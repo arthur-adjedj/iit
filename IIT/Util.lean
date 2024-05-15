@@ -7,6 +7,8 @@ open Meta
 
 namespace Lean
 
+instance : Coe String Name := ⟨Name.mkSimple⟩
+
 namespace Expr
 
 def liftBVarsOne (e : Expr) : Expr := liftLooseBVars e 0 1
